@@ -70,6 +70,9 @@ require([
                                     field.focus();
                                 }
                             }
+                        } else {
+                            console.log(jqXHR);
+                            window.location.href = '/payment/error/';
                         }
                     }
                 }

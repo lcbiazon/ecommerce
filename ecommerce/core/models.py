@@ -126,9 +126,57 @@ class SiteConfiguration(models.Model):
         blank=True,
         default=False
     )
+    enable_sdn_check = models.BooleanField(
+        verbose_name=_('Enable SDN check'),
+        help_text=_('Enable SDN check at checkout.'),
+        blank=True,
+        default=False
+    )
+    sdn_api_url = models.CharField(
+        verbose_name=_('US Treasury SDN API URL'),
+        help_text=_('US Treasury SDN API URL.'),
+        max_length=255,
+        blank=True
+    )
+    sdn_api_key = models.CharField(
+        verbose_name=_('US Treasury SDN API key'),
+        help_text=_('US Treasury SDN API key.'),
+        max_length=255,
+        blank=True
+    )
+    sdn_api_list = models.CharField(
+        verbose_name=_('SDN lists'),
+        help_text=_('A comma seperated list of Treasury OFAC lists to check against.'),
+        max_length=255,
+        blank=True
+    )
 
     class Meta(object):
         unique_together = ('site', 'partner')
+
+    def sdn_check_url(self, full_name, address, country):
+        """Construct the SDN check URL.
+        The SDN check URL is specific for https://api.trade.gov SDN endpoint.
+
+        Args:
+            full_name(str): Full name of the user who is checked.
+            address(str): User's address.
+            country(str): User's country.
+
+        Returns:
+            URL constructed from saved SDN values and the user's full name.
+        """
+        return (
+            '{sdn_api}/?sources={sdn_list}&api_key={sdn_key}&type=individual'
+            '&name={full_name}&address={address}&countries={country}'
+        ).format(
+            sdn_api=self.sdn_api_url,
+            sdn_list=self.sdn_api_list,
+            sdn_key=self.sdn_api_key,
+            full_name=full_name,
+            address=address,
+            country=country
+        )
 
     @property
     def payment_processors_set(self):

@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import json
 
 import ddt
+import httpretty
 import mock
 from django.conf import settings
 from django.core.urlresolvers import reverse
@@ -45,6 +46,9 @@ class CybersourceSubmitViewTests(CybersourceMixin, TestCase):
         self.user = self.create_user()
         self.client.login(username=self.user.username, password=self.password)
         self.site.siteconfiguration.enable_otto_receipt_page = True
+        self.site.siteconfiguration.sdn_api_url = 'http://sdn.check'
+        self.site.siteconfiguration.sdn_api_list = 'SDN'
+        self.site.siteconfiguration.sdn_api_key = 'sdnkey'
         self.site.siteconfiguration.save()
 
     def _generate_data(self, basket_id):
@@ -113,10 +117,21 @@ class CybersourceSubmitViewTests(CybersourceMixin, TestCase):
         self._assert_basket_error(basket.id, error_msg)
 
     @freeze_time('2016-01-01')
+    @httpretty.activate
     def test_valid_request(self):
         """ Verify the view returns the CyberSource parameters if the request is valid. """
         basket = self._create_valid_basket()
         data = self._generate_data(basket.id)
+
+        # Mock the SDN check to return no matches.
+        httpretty.register_uri(
+            httpretty.GET,
+            self.site.siteconfiguration.sdn_api_url,
+            body=json.dumps({'total': 0}),
+            status=200,
+            content_type='application/json'
+        )
+
         response = self.client.post(self.path, data)
 
         self.assertEqual(response.status_code, 200)

@@ -23,7 +23,7 @@ from ecommerce.extensions.checkout.utils import get_receipt_page_url
 from ecommerce.extensions.payment.exceptions import InvalidSignatureError, InvalidBasketError
 from ecommerce.extensions.payment.forms import PaymentForm
 from ecommerce.extensions.payment.processors.cybersource import Cybersource
-from ecommerce.extensions.payment.utils import clean_field_value
+from ecommerce.extensions.payment.utils import clean_field_value, sdn_check
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +93,14 @@ class CybersourceSubmitView(FormView):
             logger.debug('Basket %d must be in the "Open" state. It is currently in the "%s" state.',
                          basket.id, basket.status)
             error_msg = _('Your basket may have been modified or already purchased. Refresh the page to try again.')
+            return self._basket_error_response(error_msg)
+
+        full_name = '{first_name} {last_name}'.format(
+            first_name=data['first_name'],
+            last_name=data['last_name']
+        )
+        if not sdn_check(request, full_name, data['address_line1'], data['country']):
+            error_msg = _('SDN check failed.')
             return self._basket_error_response(error_msg)
 
         basket.strategy = request.strategy
