@@ -6,6 +6,7 @@ import logging
 
 import waffle
 from django.db import transaction
+from django.shortcuts import redirect
 from ecommerce_worker.fulfillment.v1.tasks import fulfill_order
 from oscar.apps.checkout.mixins import OrderPlacementMixin
 from oscar.core.loading import get_class, get_model
@@ -181,6 +182,17 @@ class EdxOrderPlacementMixin(OrderPlacementMixin):
         )
 
         return order
+
+    def redirect_to_receipt_page_on_success(self, request, receipt_page_url):
+        """ Adds data that indicates payment success to the request session object.
+        Arguments:
+            request(HttpRequest): Request made to a Payment Processor View.
+            receipt_page_url(str): Receipt Page URL
+        Returns:
+            response(HttpRedirectResponse): Redirect Response.
+        """
+        request.session['fire_tracking_events'] = True
+        return redirect(receipt_page_url)
 
     def send_confirmation_message(self, order, code, site=None, **kwargs):
         ctx = self.get_message_context(order)
