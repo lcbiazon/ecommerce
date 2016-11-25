@@ -128,8 +128,7 @@ class Course(models.Model):
             credit_provider=None,
             expires=None,
             credit_hours=None,
-            remove_stale_modes=True,
-            create_enrollment_code=False
+            remove_stale_modes=True
     ):
         """
         Creates course seat products.
@@ -145,7 +144,6 @@ class Course(models.Model):
             expires(Datetime): Date when the seat type expires.
             credit_hours(int): Number of credit hours provided.
             remove_stale_modes(bool): Remove stale modes.
-            create_enrollment_code(bool): Whether an enrollment code is created in additon to the seat.
 
         Returns:
             Product:  The seat that has been created or updated.
@@ -211,10 +209,6 @@ class Course(models.Model):
         seat.attr.certificate_type = certificate_type
         seat.attr.course_key = course_id
         seat.attr.id_verification_required = id_verification_required
-        if waffle.switch_is_active(ENROLLMENT_CODE_SWITCH) and \
-                certificate_type in ENROLLMENT_CODE_SEAT_TYPES and \
-                create_enrollment_code:
-            self._create_or_update_enrollment_code(certificate_type, id_verification_required, partner, price)
 
         if credit_provider:
             seat.attr.credit_provider = credit_provider
@@ -272,7 +266,7 @@ class Course(models.Model):
         except Product.DoesNotExist:
             return None
 
-    def _create_or_update_enrollment_code(self, seat_type, id_verification_required, partner, price):
+    def create_or_update_enrollment_code(self, seat_type, id_verification_required, price, partner):
         """
         Creates an enrollment code product and corresponding stock record for the specified seat.
         Includes course ID and seat type as product attributes.
@@ -285,35 +279,45 @@ class Course(models.Model):
         Returns:
             Enrollment code product.
         """
-        enrollment_code_product_class = ProductClass.objects.get(name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME)
-        enrollment_code = self.enrollment_code_product
-        if not enrollment_code:
+        if waffle.switch_is_active(ENROLLMENT_CODE_SWITCH) and seat_type in ENROLLMENT_CODE_SEAT_TYPES:
+            enrollment_code_product_class = ProductClass.objects.get(name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME)
+            enrollment_code = self.enrollment_code_product
             title = 'Enrollment code for {seat_type} seat in {course_name}'.format(
                 seat_type=seat_type,
                 course_name=self.name
             )
-            enrollment_code = Product(
-                title=title,
-                product_class=enrollment_code_product_class,
-                course=self
-            )
-        enrollment_code.attr.course_key = self.id
-        enrollment_code.attr.seat_type = seat_type
-        enrollment_code.attr.id_verification_required = id_verification_required
-        enrollment_code.save()
+            if not enrollment_code:
+                enrollment_code = Product(
+                    title=title,
+                    product_class=enrollment_code_product_class,
+                    course=self
+                )
+            enrollment_code.title = title
+            enrollment_code.attr.course_key = self.id
+            enrollment_code.attr.seat_type = seat_type
+            enrollment_code.attr.id_verification_required = id_verification_required
+            enrollment_code.save()
 
-        try:
-            stock_record = StockRecord.objects.get(product=enrollment_code, partner=partner)
-        except StockRecord.DoesNotExist:
-            enrollment_code_sku = generate_sku(enrollment_code, partner)
-            stock_record = StockRecord(
-                product=enrollment_code,
-                partner=partner,
-                partner_sku=enrollment_code_sku
-            )
+            try:
+                stock_record = StockRecord.objects.get(product=enrollment_code, partner=partner)
+            except StockRecord.DoesNotExist:
+                enrollment_code_sku = generate_sku(enrollment_code, partner)
+                stock_record = StockRecord(
+                    product=enrollment_code,
+                    partner=partner,
+                    partner_sku=enrollment_code_sku
+                )
 
-        stock_record.price_excl_tax = price
-        stock_record.price_currency = settings.OSCAR_DEFAULT_CURRENCY
-        stock_record.save()
+            stock_record.price_excl_tax = price
+            stock_record.price_currency = settings.OSCAR_DEFAULT_CURRENCY
+            stock_record.save()
 
-        return enrollment_code
+            return enrollment_code
+        return None
+
+    def delete_enrollment_code(self):
+        """
+        Removes the course's bulk enrollment code.
+        """
+        if self.enrollment_code_product:
+            self.enrollment_code_product.delete()

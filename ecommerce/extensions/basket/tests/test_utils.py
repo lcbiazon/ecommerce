@@ -63,7 +63,7 @@ class BasketUtilsTests(CourseCatalogTestMixin, TestCase):
         """Verify the basket does not contain a voucher if enrollment code is added to it."""
         course = CourseFactory()
         toggle_switch(ENROLLMENT_CODE_SWITCH, True)
-        course.create_or_update_seat('verified', False, 10, self.partner, create_enrollment_code=True)
+        course.create_or_update_seat('verified', False, 10, self.partner)
         enrollment_code = Product.objects.get(product_class__name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME)
         voucher, product = prepare_voucher()
 

@@ -296,7 +296,7 @@ class BasketSummaryViewTests(CourseCatalogTestMixin, CourseCatalogMockMixin, Lms
         """Verify the correct seat type attribute is retrieved."""
         course = CourseFactory()
         toggle_switch(ENROLLMENT_CODE_SWITCH, True)
-        course.create_or_update_seat('verified', False, 10, self.partner, create_enrollment_code=True)
+        course.create_or_update_seat('verified', False, 10, self.partner)
         enrollment_code = Product.objects.get(product_class__name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME)
         self.create_basket_and_add_product(enrollment_code)
         self.mock_dynamic_catalog_course_runs_api(course_run=course)
@@ -321,7 +321,7 @@ class BasketSummaryViewTests(CourseCatalogTestMixin, CourseCatalogMockMixin, Lms
         ec_course = CourseFactory()
         no_ec_course = CourseFactory()
         seat_without_ec = no_ec_course.create_or_update_seat('verified', False, 10, self.partner)
-        seat_with_ec = ec_course.create_or_update_seat('verified', False, 10, self.partner, create_enrollment_code=True)
+        seat_with_ec = ec_course.create_or_update_seat('verified', False, 10, self.partner)
         self.create_basket_and_add_product(seat_without_ec)
         self.mock_dynamic_catalog_course_runs_api(course_run=no_ec_course)
 
@@ -348,7 +348,7 @@ class BasketSummaryViewTests(CourseCatalogTestMixin, CourseCatalogMockMixin, Lms
         course = CourseFactory()
         toggle_switch(ENROLLMENT_CODE_SWITCH, True)
 
-        seat = course.create_or_update_seat('verified', False, 10, self.partner, create_enrollment_code=True)
+        seat = course.create_or_update_seat('verified', False, 10, self.partner)
         seat_sku = StockRecord.objects.get(product=seat).partner_sku
         enrollment_code = Product.objects.get(product_class__name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME)
         ec_sku = StockRecord.objects.get(product=enrollment_code).partner_sku

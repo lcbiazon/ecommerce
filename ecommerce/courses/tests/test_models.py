@@ -37,11 +37,9 @@ class CourseTests(CourseCatalogTestMixin, TestCase):
         self.assertEqual(course.products.count(), 1)
         self.assertEqual(len(course.seat_products), 0)
 
-        # Create the seat products
-        toggle_switch(ENROLLMENT_CODE_SWITCH, True)
         seats = [course.create_or_update_seat('honor', False, 0, self.partner),
-                 course.create_or_update_seat('verified', True, 50, self.partner, create_enrollment_code=True)]
-        self.assertEqual(course.products.count(), 4)
+                 course.create_or_update_seat('verified', True, 50, self.partner)]
+        self.assertEqual(course.products.count(), 3)
 
         # The property should return only the child seats.
         self.assertEqual(set(course.seat_products), set(seats))
@@ -134,20 +132,14 @@ class CourseTests(CourseCatalogTestMixin, TestCase):
         seat = course.seat_products[0]
         self.assert_course_seat_valid(seat, course, certificate_type, id_verification_required, price)
 
-    def test_create_seat_with_enrollment_code(self):
+    def test_create_enrollment_code(self):
         """Verify an enrollment code product is created."""
         course = CourseFactory()
         seat_type = 'verified'
         price = 5
         toggle_switch(ENROLLMENT_CODE_SWITCH, True)
-        course.create_or_update_seat(seat_type, True, price, self.partner, create_enrollment_code=True)
+        course.create_or_update_enrollment_code(seat_type, True, price, self.partner)
 
-        enrollment_code = Product.objects.get(product_class__name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME)
-        self.assertEqual(enrollment_code.attr.course_key, course.id)
-        self.assertEqual(enrollment_code.attr.seat_type, seat_type)
-
-        # Second time should skip over the enrollment code creation logic but result in the same data
-        course.create_or_update_seat(seat_type, True, price, self.partner)
         enrollment_code = Product.objects.get(product_class__name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME)
         self.assertEqual(enrollment_code.attr.course_key, course.id)
         self.assertEqual(enrollment_code.attr.seat_type, seat_type)
@@ -291,21 +283,32 @@ class CourseTests(CourseCatalogTestMixin, TestCase):
         course = Course.objects.create(id='test/course/123', name='Test Course 123')
 
         # Audit seat products should not have a corresponding enrollment code
-        course.create_or_update_seat('audit', False, 0, self.partner)
+        course.create_or_update_enrollment_code('audit', False, 0, self.partner)
         with self.assertRaises(Product.DoesNotExist):
             enrollment_code = Product.objects.get(product_class__name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME)
 
         # Honor seat products should not have a corresponding enrollment code
-        course.create_or_update_seat('honor', False, 0, self.partner)
+        course.create_or_update_enrollment_code('honor', False, 0, self.partner)
         with self.assertRaises(Product.DoesNotExist):
             enrollment_code = Product.objects.get(product_class__name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME)
 
         # Verified seat products should have a corresponding enrollment code
-        course.create_or_update_seat('verified', True, 10, self.partner, create_enrollment_code=True)
+        course.create_or_update_enrollment_code('verified', True, 10, self.partner)
         enrollment_code = Product.objects.get(product_class__name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME)
         self.assertEqual(enrollment_code.attr.course_key, course.id)
         self.assertEqual(enrollment_code.attr.seat_type, 'verified')
 
-        # One parent product, three seat products, one enrollment code product (verified) -> five total products
-        self.assertEqual(course.products.count(), 5)
-        self.assertEqual(len(course.seat_products), 3)  # Definitely three seat products...
+        # One parent product, and one enrollment code product (verified) -> two total products
+        self.assertEqual(course.products.count(), 2)
+
+    def test_delete_enrollment_code(self):
+        """ Verify an enrollment code is deleted. """
+        toggle_switch(ENROLLMENT_CODE_SWITCH, True)
+        course = Course.objects.create()
+        enrollment_code = course.create_or_update_enrollment_code('verified', False, 0, self.partner)
+
+        self.assertTrue(Product.objects.filter(product_class__name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME).exists())
+        self.assertTrue(StockRecord.objects.filter(product=enrollment_code).exists())
+        course.delete_enrollment_code()
+        self.assertFalse(Product.objects.filter(product_class__name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME).exists())
+        self.assertFalse(StockRecord.objects.filter(product=enrollment_code).exists())

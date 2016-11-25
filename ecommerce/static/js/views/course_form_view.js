@@ -120,8 +120,8 @@ define([
                     },
                     onSet: 'cleanHonorMode'
                 },
-                'input[name=create_enrollment_code]': {
-                    observe: 'create_enrollment_code'
+                'input[name=bulk_enrollment_code]': {
+                    observe: 'bulk_enrollment_code'
                 }
             },
 
@@ -206,9 +206,9 @@ define([
                 this.$('.fields:first').before(AlertDivTemplate);
 
                 this.stickit();
+                this.renderBulkEnrollmentCode();
 
                 this._super();
-
                 return this;
             },
 
@@ -331,15 +331,8 @@ define([
              * Toggle the bulk enrollment checkbox. Hidden only for audit mode.
              */
             toggleBulkEnrollmentField: function() {
-                var bulk_enrollment_field = this.$('[name=create_enrollment_code]'),
+                var bulk_enrollment_field = this.$('[name=bulk_enrollment_code]'),
                     form_group = bulk_enrollment_field.closest('.form-group');
-                $.ajax({
-                    url: '/api/v2/siteconfiguration/',
-                    method: 'get',
-                    contentType: 'application/json',
-                    async: false,
-                    success: this.onSuccess.bind(this)
-                });
 
                 if (this.$('[name=type]:checked').val() === 'audit') {
                     bulk_enrollment_field.prop('checked', false).trigger('change');
@@ -349,13 +342,34 @@ define([
                 }
             },
 
+            renderBulkEnrollmentCode: function() {
+                if (this.model.get('bulk_enrollment_code')) {
+                    this.$('[name=bulk_enrollment_code]').prop('checked', true);
+                }
+                this.toggleDisabledBulkEnrollmentField();
+            },
+
+            /**
+             * Toggle the disabled attribute for bulk enrollment checkbox according
+             * to the site configuration.
+             */
+            toggleDisabledBulkEnrollmentField: function() {
+                $.ajax({
+                    url: '/api/v2/siteconfiguration/',
+                    method: 'get',
+                    contentType: 'application/json',
+                    async: false,
+                    success: this.onSuccess.bind(this)
+                });
+            },
+
             onSuccess: function(data) {
                 var site_configuration;
                 site_configuration = _.find(data.results, function(item) {
                     return item.site.domain === window.location.host;
                 }) || {};
                 if (!site_configuration.enable_enrollment_codes) {
-                    this.$('[name=create_enrollment_code]').attr('disabled', true);
+                    this.$('[name=bulk_enrollment_code]').attr('disabled', true);
                 }
             }
         });

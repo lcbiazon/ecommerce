@@ -189,8 +189,12 @@ class LMSPublisherTests(CourseCatalogTestMixin, TestCase):
         self.assertDictEqual(actual, expected)
 
     def test_serialize_seat_with_enrollment_code(self):
+        """
+        Verify information about the bulk enrollment code is included in the serialized data.
+        """
         toggle_switch(ENROLLMENT_CODE_SWITCH, True)
-        seat = self.course.create_or_update_seat('verified', False, 10, self.partner, create_enrollment_code=True)
+        seat = self.course.create_or_update_seat('verified', False, 10, self.partner)
+        self.course.create_or_update_enrollment_code('verified', False, 10, self.partner)
         stock_record = seat.stockrecords.first()
         ec_stock_record = StockRecord.objects.get(product__product_class__name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME)
 

@@ -275,6 +275,7 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
     products = ProductSerializer(many=True)
     products_url = serializers.SerializerMethodField()
     last_edited = serializers.SerializerMethodField()
+    bulk_enrollment_code = serializers.SerializerMethodField()
 
     def __init__(self, *args, **kwargs):
         super(CourseSerializer, self).__init__(*args, **kwargs)
@@ -292,9 +293,15 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
         return reverse('api:v2:course-product-list', kwargs={'parent_lookup_course_id': obj.id},
                        request=self.context['request'])
 
+    def get_bulk_enrollment_code(self, obj):
+        return True if obj.enrollment_code_product else False
+
     class Meta(object):
         model = Course
-        fields = ('id', 'url', 'name', 'verification_deadline', 'type', 'products_url', 'last_edited', 'products')
+        fields = (
+            'id', 'url', 'name', 'verification_deadline', 'type', 'products_url',
+            'last_edited', 'products', 'bulk_enrollment_code'
+        )
         read_only_fields = ('type', 'products')
         extra_kwargs = {
             'url': {'view_name': COURSE_DETAIL_VIEW}
@@ -383,8 +390,6 @@ class AtomicPublicationSerializer(serializers.Serializer):  # pylint: disable=ab
 
                     # Extract arguments required for Seat creation, deserializing as necessary.
                     certificate_type = attrs.get('certificate_type', '')
-                    create_enrollment_code = product['course'].get('create_enrollment_code') and \
-                        self.context['request'].site.siteconfiguration.enable_enrollment_codes
                     id_verification_required = attrs['id_verification_required']
                     price = Decimal(product['price'])
 
@@ -402,9 +407,16 @@ class AtomicPublicationSerializer(serializers.Serializer):  # pylint: disable=ab
                         partner,
                         expires=expires,
                         credit_provider=credit_provider,
-                        credit_hours=credit_hours,
-                        create_enrollment_code=create_enrollment_code
+                        credit_hours=credit_hours
                     )
+
+                    # Create or delete bulk enrollment codes if they are enabled.
+                    # TODO: check the waffle switch here instead? Or move this check to create method too?
+                    if self.context['request'].site.siteconfiguration.enable_enrollment_codes:
+                        if product['course'].get('bulk_enrollment_code'):
+                            course.create_or_update_enrollment_code(certificate_type, id_verification_required, price, partner)
+                        else:
+                            course.delete_enrollment_code()
 
                 resp_message = course.publish_to_lms(access_token=self.access_token)
                 published = (resp_message is None)
