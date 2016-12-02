@@ -16,11 +16,12 @@ from oscar.test import factories
 from oscar.test.contextmanagers import mock_signal_receiver
 from testfixtures import LogCapture
 
+from ecommerce.extensions.checkout.utils import get_receipt_page_url
 from ecommerce.extensions.fulfillment.status import ORDER
 from ecommerce.extensions.payment.processors.cybersource import Cybersource
 from ecommerce.extensions.payment.tests.mixins import PaymentEventsMixin, CybersourceMixin
 from ecommerce.extensions.payment.views.cybersource import CybersourceNotifyView
-from ecommerce.extensions.refund.tests.mixins import RefundTestMixin
+from ecommerce.extensions.offer.tests.mixins import OfferTestMixin
 from ecommerce.tests.testcases import TestCase
 
 JSON = 'application/json'
@@ -417,7 +418,7 @@ class CybersourceSubmitViewTests(CybersourceMixin, TestCase):
         self.assertIn(field, errors)
 
 
-class CybersourceInterstitialViewTests(RefundTestMixin, TestCase):
+class CybersourceInterstitialViewTests(OfferTestMixin, TestCase):
     """ Test interstitial view for Cybersource Payments. """
 
     def setUp(self):
@@ -440,7 +441,7 @@ class CybersourceInterstitialViewTests(RefundTestMixin, TestCase):
         """ CyberSource Payment Failures should render the error page. """
         response = self.client.post(reverse('cybersource_redirect'), {'req_reference_number': 'ORDER-404'})
 
-        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.status_code, 502)
         self.assertDictContainsSubset(
             {
                 'basket_url': self.request.site.siteconfiguration.build_ecommerce_url(reverse('basket:summary')),

@@ -185,11 +185,13 @@ class EdxOrderPlacementMixin(OrderPlacementMixin):
 
     def redirect_to_receipt_page_on_success(self, request, receipt_page_url):
         """ Adds data that indicates payment success to the request session object.
+
         Arguments:
             request(HttpRequest): Request made to a Payment Processor View.
-            receipt_page_url(str): Receipt Page URL
+            receipt_page_url(str): Receipt page URL
+
         Returns:
-            response(HttpRedirectResponse): Redirect Response.
+            response(HttpRedirectResponse): Redirect to the specified receipt page URL.
         """
         request.session['fire_tracking_events'] = True
         return redirect(receipt_page_url)
