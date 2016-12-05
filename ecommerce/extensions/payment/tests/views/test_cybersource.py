@@ -39,6 +39,7 @@ post_checkout = get_class('checkout.signals', 'post_checkout')
 @ddt.ddt
 class CybersourceNotifyViewTests(CybersourceMixin, PaymentEventsMixin, TestCase):
     """ Test processing of CyberSource notifications. """
+    path = reverse('cybersource_notify')
 
     def setUp(self):
         super(CybersourceNotifyViewTests, self).setUp()
@@ -54,6 +55,9 @@ class CybersourceNotifyViewTests(CybersourceMixin, PaymentEventsMixin, TestCase)
 
         self.processor = Cybersource(self.site)
         self.processor_name = self.processor.NAME
+
+        self.go_to_receipt_page_status_code = 200
+        self.cybersource_processing_failure_status_code = 500
 
     def _assert_payment_data_recorded(self, notification):
         """ Ensure PaymentEvent, PaymentProcessorResponse, and Source objects are created for the basket. """
@@ -76,7 +80,7 @@ class CybersourceNotifyViewTests(CybersourceMixin, PaymentEventsMixin, TestCase)
         """Verify that payment processing operations fail gracefully."""
         logger_name = 'ecommerce.extensions.payment.views.cybersource'
         with LogCapture(logger_name) as l:
-            response = self.client.post(reverse('cybersource_notify'), notification)
+            response = self.client.post(self.path, notification)
 
             self.assertEqual(response.status_code, status_code)
 
@@ -116,7 +120,7 @@ class CybersourceNotifyViewTests(CybersourceMixin, PaymentEventsMixin, TestCase)
         notification = self.generate_notification(self.basket, billing_address=self.billing_address)
 
         with mock_signal_receiver(post_checkout) as receiver:
-            response = self.client.post(reverse('cybersource_notify'), notification)
+            response = self.client.post(self.path, notification)
 
             # Validate that a new order exists in the correct state
             order = Order.objects.get(basket=self.basket)
@@ -133,7 +137,7 @@ class CybersourceNotifyViewTests(CybersourceMixin, PaymentEventsMixin, TestCase)
             self.assertEqual(kwargs['order'], order)
 
         # The view should always return 200
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, self.go_to_receipt_page_status_code)
 
         # Validate the payment data was recorded for auditing
         self._assert_payment_data_recorded(notification)
@@ -151,7 +155,7 @@ class CybersourceNotifyViewTests(CybersourceMixin, PaymentEventsMixin, TestCase)
         """
 
         notification = self.generate_notification(self.basket, decision=decision)
-        response = self.client.post(reverse('cybersource_notify'), notification)
+        response = self.client.post(self.path, notification)
 
         # The view should always return 200
         self.assertEqual(response.status_code, 200)
@@ -191,7 +195,8 @@ class CybersourceNotifyViewTests(CybersourceMixin, PaymentEventsMixin, TestCase)
             )
             self.assertTrue(fake_handle_payment.called)
 
-    def test_unable_to_place_order(self):
+    @ddt.data(UnableToPlaceOrder, KeyError)
+    def test_unable_to_place_order(self, exception):
         """ When payment is accepted, but an order cannot be placed, log an error and return HTTP 200. """
 
         notification = self.generate_notification(
@@ -200,21 +205,15 @@ class CybersourceNotifyViewTests(CybersourceMixin, PaymentEventsMixin, TestCase)
         )
 
         # Verify that anticipated errors are handled gracefully.
-        with mock.patch.object(CybersourceNotifyView, 'handle_order_placement',
-                               side_effect=UnableToPlaceOrder) as fake_handle_order_placement:
+        with mock.patch.object(
+            CybersourceNotifyView,
+            'handle_order_placement',
+            side_effect=exception
+        ) as fake_handle_order_placement:
             error_message = 'Payment was received, but an order for basket [{basket_id}] could not be placed.'.format(
                 basket_id=self.basket.id,
             )
-            self._assert_processing_failure(notification, 500, error_message)
-            self.assertTrue(fake_handle_order_placement.called)
-
-        # Verify that unanticipated errors are also handled gracefully.
-        with mock.patch.object(CybersourceNotifyView, 'handle_order_placement',
-                               side_effect=KeyError) as fake_handle_order_placement:
-            error_message = 'Payment was received, but an order for basket [{basket_id}] could not be placed.'.format(
-                basket_id=self.basket.id,
-            )
-            self._assert_processing_failure(notification, 500, error_message)
+            self._assert_processing_failure(notification, self.cybersource_processing_failure_status_code, error_message)
             self.assertTrue(fake_handle_order_placement.called)
 
     def test_invalid_basket(self):
@@ -226,7 +225,7 @@ class CybersourceNotifyViewTests(CybersourceMixin, PaymentEventsMixin, TestCase)
             billing_address=self.billing_address,
             req_reference_number=order_number,
         )
-        response = self.client.post(reverse('cybersource_notify'), notification)
+        response = self.client.post(self.path, notification)
 
         self.assertEqual(response.status_code, 400)
         self.assert_processor_response_recorded(self.processor_name, notification[u'transaction_id'], notification)
@@ -238,8 +237,8 @@ class CybersourceNotifyViewTests(CybersourceMixin, PaymentEventsMixin, TestCase)
         """ Ensure notifications are handled properly with or without keys/values present for optional fields. """
 
         def check_notification_address(notification, expected_address):
-            response = self.client.post(reverse('cybersource_notify'), notification)
-            self.assertEqual(response.status_code, 200)
+            response = self.client.post(self.path, notification)
+            self.assertEqual(response.status_code, self.go_to_receipt_page_status_code)
             self.assertTrue(mock_placement_handler.called)
             actual_address = mock_placement_handler.call_args[0][6]
             self.assertEqual(actual_address.summary, expected_address.summary)
@@ -275,7 +274,7 @@ class CybersourceNotifyViewTests(CybersourceMixin, PaymentEventsMixin, TestCase)
         """
         notification = self.generate_notification(self.basket)
         notification[u'signature'] = u'Tampered'
-        response = self.client.post(reverse('cybersource_notify'), notification)
+        response = self.client.post(self.path, notification)
 
         # The view should always return 200
         self.assertEqual(response.status_code, 400)
@@ -417,5 +416,13 @@ class CybersourceSubmitViewTests(CybersourceMixin, TestCase):
         self.assertIn(field, errors)
 
 
+@ddt.ddt
 class CybersourceInterstitialViewTests(CybersourceNotifyViewTests, TestCase):
     """ Test interstitial view for Cybersource Payments. """
+    path = reverse('cybersource_redirect')
+
+    def setUp(self):
+        super(CybersourceInterstitialViewTests, self).setUp()
+
+        self.go_to_receipt_page_status_code = 302
+        self.cybersource_processing_failure_status_code = 502
