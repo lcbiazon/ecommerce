@@ -16,7 +16,6 @@ from oscar.test import factories
 from oscar.test.contextmanagers import mock_signal_receiver
 from testfixtures import LogCapture
 
-from ecommerce.extensions.checkout.utils import get_receipt_page_url
 from ecommerce.extensions.fulfillment.status import ORDER
 from ecommerce.extensions.payment.processors.cybersource import Cybersource
 from ecommerce.extensions.payment.tests.mixins import PaymentEventsMixin, CybersourceMixin
