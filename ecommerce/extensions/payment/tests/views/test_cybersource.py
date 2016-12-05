@@ -21,13 +21,13 @@ from ecommerce.extensions.fulfillment.status import ORDER
 from ecommerce.extensions.payment.processors.cybersource import Cybersource
 from ecommerce.extensions.payment.tests.mixins import PaymentEventsMixin, CybersourceMixin
 from ecommerce.extensions.payment.views.cybersource import CybersourceNotifyView
-from ecommerce.extensions.offer.tests.mixins import OfferTestMixin
 from ecommerce.tests.testcases import TestCase
 
 JSON = 'application/json'
 
 Basket = get_model('basket', 'Basket')
 Order = get_model('order', 'Order')
+OrderNumberGenerator = get_class('order.utils', 'OrderNumberGenerator')
 PaymentEvent = get_model('order', 'PaymentEvent')
 PaymentEventType = get_model('order', 'PaymentEventType')
 PaymentProcessorResponse = get_model('payment', 'PaymentProcessorResponse')
@@ -418,7 +418,7 @@ class CybersourceSubmitViewTests(CybersourceMixin, TestCase):
         self.assertIn(field, errors)
 
 
-class CybersourceInterstitialViewTests(OfferTestMixin, TestCase):
+class CybersourceInterstitialViewTests(TestCase):
     """ Test interstitial view for Cybersource Payments. """
 
     def setUp(self):
@@ -428,7 +428,7 @@ class CybersourceInterstitialViewTests(OfferTestMixin, TestCase):
 
     def test_redirect_to_receipt_page_path(self):
         """ Successful CyberSource Payments should be redirected to the receipt page. """
-        order = self.create_order()
+        order = factories.OrderFactory()
         response = self.client.post(reverse('cybersource_redirect'), {'req_reference_number': order.number})
 
         self.assertEqual(response.status_code, 302)
@@ -439,7 +439,9 @@ class CybersourceInterstitialViewTests(OfferTestMixin, TestCase):
 
     def test_show_cybersource_payment_error_message(self):
         """ CyberSource Payment Failures should render the error page. """
-        response = self.client.post(reverse('cybersource_redirect'), {'req_reference_number': 'ORDER-404'})
+        basket = factories.BasketFactory()
+        order_number = OrderNumberGenerator().order_number_from_basket_id(self.request.site.siteconfiguration.partner, basket.id)
+        response = self.client.post(reverse('cybersource_redirect'), {'req_reference_number': order_number})
 
         self.assertEqual(response.status_code, 502)
         self.assertDictContainsSubset(

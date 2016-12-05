@@ -124,7 +124,7 @@ class PaypalPaymentExecutionView(EdxOrderPlacementMixin, View):
                 request=request
             )
 
-            return redirect(receipt_url)
+            return self.redirect_to_receipt_page_on_success(request, receipt_url)
         except:  # pylint: disable=bare-except
             logger.exception(self.order_placement_failure_msg, basket.id)
             return redirect(receipt_url)
