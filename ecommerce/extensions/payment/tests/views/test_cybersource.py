@@ -418,39 +418,5 @@ class CybersourceSubmitViewTests(CybersourceMixin, TestCase):
         self.assertIn(field, errors)
 
 
-class CybersourceInterstitialViewTests(TestCase):
+class CybersourceInterstitialViewTests(CybersourceNotifyViewTests, TestCase):
     """ Test interstitial view for Cybersource Payments. """
-
-    def setUp(self):
-        super(CybersourceInterstitialViewTests, self).setUp()
-        self.toggle_ecommerce_receipt_page(True)
-        self.user = factories.UserFactory()
-
-    def test_redirect_to_receipt_page_path(self):
-        """ Successful CyberSource Payments should be redirected to the receipt page. """
-        order = factories.OrderFactory()
-        response = self.client.post(reverse('cybersource_redirect'), {'req_reference_number': order.number})
-
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, get_receipt_page_url(
-            order_number=order.number,
-            site_configuration=self.request.site.siteconfiguration
-        ))
-
-    def test_show_cybersource_payment_error_message(self):
-        """ CyberSource Payment Failures should render the error page. """
-        basket = factories.BasketFactory()
-        order_number = OrderNumberGenerator().order_number_from_basket_id(
-            self.request.site.siteconfiguration.partner,
-            basket.id
-        )
-        response = self.client.post(reverse('cybersource_redirect'), {'req_reference_number': order_number})
-
-        self.assertEqual(response.status_code, 502)
-        self.assertDictContainsSubset(
-            {
-                'basket_url': self.request.site.siteconfiguration.build_ecommerce_url(reverse('basket:summary')),
-                'payment_support_email': self.request.site.siteconfiguration.payment_support_email
-            },
-            response.context_data
-        )
