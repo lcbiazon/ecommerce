@@ -440,7 +440,10 @@ class CybersourceInterstitialViewTests(TestCase):
     def test_show_cybersource_payment_error_message(self):
         """ CyberSource Payment Failures should render the error page. """
         basket = factories.BasketFactory()
-        order_number = OrderNumberGenerator().order_number_from_basket_id(self.request.site.siteconfiguration.partner, basket.id)
+        order_number = OrderNumberGenerator().order_number_from_basket_id(
+            self.request.site.siteconfiguration.partner,
+            basket.id
+        )
         response = self.client.post(reverse('cybersource_redirect'), {'req_reference_number': order_number})
 
         self.assertEqual(response.status_code, 502)
