@@ -213,7 +213,11 @@ class CybersourceNotifyViewTests(CybersourceMixin, PaymentEventsMixin, TestCase)
             error_message = 'Payment was received, but an order for basket [{basket_id}] could not be placed.'.format(
                 basket_id=self.basket.id,
             )
-            self._assert_processing_failure(notification, self.cybersource_processing_failure_status_code, error_message)
+            self._assert_processing_failure(
+                notification,
+                self.cybersource_processing_failure_status_code,
+                error_message
+            )
             self.assertTrue(fake_handle_order_placement.called)
 
     def test_invalid_basket(self):

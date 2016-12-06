@@ -8,6 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db import transaction
 from django.http import HttpResponse, JsonResponse
+from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext as _
 from django.views.decorators.csrf import csrf_exempt
@@ -269,6 +270,19 @@ class CybersourceInterstitialView(CybersourceNotifyView, TemplateView):
     """ Interstitial view for Cybersource Payments. """
     template_name = 'checkout/cybersource_error.html'
 
+    def _redirect_to_receipt_page_on_success(self, request, receipt_page_url):
+        """ Adds data that indicates payment success to the request session object.
+
+        Arguments:
+            request(HttpRequest): Request made to a Payment Processor View.
+            receipt_page_url(str): Receipt page URL
+
+        Returns:
+            response(HttpRedirectResponse): Redirect to the specified receipt page URL.
+        """
+        request.session['fire_tracking_events'] = True
+        return redirect(receipt_page_url)
+
     def post(self, request, *args, **kwargs):  # pylint: disable=unused-argument
         """Process a CyberSource merchant notification and place an order for paid products as appropriate."""
 
@@ -370,7 +384,7 @@ class CybersourceInterstitialView(CybersourceNotifyView, TemplateView):
                 site_configuration=self.request.site.siteconfiguration
             )
 
-            return self.redirect_to_receipt_page_on_success(request, receipt_page_url)
+            return self._redirect_to_receipt_page_on_success(request, receipt_page_url)
         except:  # pylint: disable=bare-except
             logger.exception(self.order_placement_failure_msg, basket.id)
             basket.thaw()
