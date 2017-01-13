@@ -300,7 +300,7 @@ class BasketUtilsTests(CourseCatalogTestMixin, TestCase):
         self.assertIsNone(retreived_ec)
 
     def test_get_enrollment_code_disabled(self):
-        """Verify nothing is returned when the EC switch disabled."""
+        """Verify None is returned when enrollment codes are disabled."""
         seat, enrollment_code = self.prepare_seat_with_enrollment_code()
         retreived_ec = get_enrollment_code(seat)
         self.assertEqual(retreived_ec, enrollment_code)
@@ -308,6 +308,13 @@ class BasketUtilsTests(CourseCatalogTestMixin, TestCase):
         toggle_switch(ENROLLMENT_CODE_SWITCH, False)
         retreived_ec = get_enrollment_code(seat)
         self.assertIsNone(retreived_ec)
+
+        toggle_switch(ENROLLMENT_CODE_SWITCH, True)
+        self.site.site_configuration.enable_enrollment_codes = False
+        self.site.site_configuration.save()
+        retreived_ec = get_enrollment_code(seat)
+        self.assertIsNone(retreived_ec)
+
 
 class BasketUtilsTransactionTests(UserMixin, TransactionTestCase):
     def setUp(self):
