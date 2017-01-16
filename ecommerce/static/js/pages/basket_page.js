@@ -181,82 +181,14 @@ define([
                 var country = $('select[name=country]').val(),
                     inputDiv = $('#div_id_state .controls'),
                     states = {
-                        'US': {
-                            'Alabama': 'AL',
-                            'Alaska': 'AK',
-                            'American': 'AS',
-                            'Arizona': 'AZ',
-                            'Arkansas': 'AR',
-                            'California': 'CA',
-                            'Colorado': 'CO',
-                            'Connecticut': 'CT',
-                            'Delaware': 'DE',
-                            'Dist. of Columbia': 'DC',
-                            'Florida': 'FL',
-                            'Georgia': 'GA',
-                            'Guam': 'GU',
-                            'Hawaii': 'HI',
-                            'Idaho': 'ID',
-                            'Illinois': 'IL',
-                            'Indiana': 'IN',
-                            'Iowa': 'IA',
-                            'Kansas': 'KS',
-                            'Kentucky': 'KY',
-                            'Louisiana': 'LA',
-                            'Maine': 'ME',
-                            'Maryland': 'MD',
-                            'Marshall Islands': 'MH',
-                            'Massachusetts': 'MA',
-                            'Michigan': 'MI',
-                            'Micronesia': 'FM',
-                            'Minnesota': 'MN',
-                            'Mississippi': 'MS',
-                            'Missouri': 'MO',
-                            'Montana': 'MT',
-                            'Nebraska': 'NE',
-                            'Nevada': 'NV',
-                            'New Hampshire': 'NH',
-                            'New Jersey': 'NJ',
-                            'New Mexico': 'NM',
-                            'New York': 'NY',
-                            'North Carolina': 'NC',
-                            'North Dakota': 'ND',
-                            'Northern Marianas': 'MP',
-                            'Ohio': 'OH',
-                            'Oklahoma': 'OK',
-                            'Oregon': 'OR',
-                            'Palau': 'PW',
-                            'Pennsylvania': 'PA',
-                            'Puerto Rico': 'PR',
-                            'Rhode Island': 'RI',
-                            'South Carolina': 'SC',
-                            'South Dakota': 'SD',
-                            'Tennessee': 'TN',
-                            'Texas': 'TX',
-                            'Utah': 'UT',
-                            'Vermont': 'VT',
-                            'Virginia': 'VA',
-                            'Virgin Islands': 'VI',
-                            'Washington': 'WA',
-                            'West Virginia': 'WV',
-                            'Wisconsin': 'WI',
-                            'Wyoming': 'WY'
-                        },
-                        'CA': {
-                            'Alberta': 'AB',
-                            'British Columbia': 'BC',
-                            'Manitoba': 'MB',
-                            'New Brunswick': 'NB',
-                            'Newfoundland and Labrador': 'NL',
-                            'Northwest Territories': 'NT',
-                            'Nova Scotia': 'NS',
-                            'Nunavut': 'NU',
-                            'Ontario': 'ON',
-                            'Prince Edward Island': 'PE',
-                            'Quebec': 'QC',
-                            'Saskatchewan': 'SK',
-                            'Yukon': 'YT'
-                        }
+                        'US': [
+                            'AL','AK','AS','AZ','AR','CA','CO','CT','DE','DC','FL','GA','GU','HI',
+                            'ID','IL','IN','IA','KS','KY','LA','ME','MD','MH','MA','MI','FM','MN',
+                            'MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','MP','OH','OK',
+                            'OR','PW','PA','PR','RI','SC','SD','TN','TX','UT','VT','VA','VI','WA',
+                            'WV','WI','WY'
+                        ],
+                        'CA': ['AB','BC','MB','NB','NL','NT','NS','NU','ON','PE','QC','SK','YT']
                     };
 
                 if (country === 'US' || country === 'CA') {
@@ -268,8 +200,8 @@ define([
                     $('#id_state').append($('<option>', {value: '', text: '<Choose state/province>'}));
                     $('#div_id_state').find('label').text('State/Province (required)');
 
-                    _.each(states[country], function(value, key) {
-                        $('#id_state').append($('<option>', {value: value, text: key}));
+                    _.each(states[country], function(state) {
+                        $('#id_state').append($('<option>', {value: state, text: state}));
                     });
                 } else {
                     $(inputDiv).empty();
