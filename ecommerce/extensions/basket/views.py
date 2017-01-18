@@ -148,9 +148,21 @@ class BasketSummaryView(BasketView):
                 if (getattr(line.product.attr, 'id_verification_required', False) and
                         line.product.attr.certificate_type != 'credit'):
                     display_verification_message = True
+                context.update({
+                    'order_details_msg': _(
+                        'You will be automatically enrolled in the course upon completing your order.'
+                    )
+                })
             elif product_class_name == 'Enrollment Code':
                 line_data = self._get_course_data(line.product)
                 show_voucher_form = False
+                context.update({
+                    'order_details_msg': _(
+                        'You will receive an email at {user_email} with your enrollment code(s).'.format(
+                            user_email=self.request.user.email
+                        )
+                    )
+                })
             else:
                 line_data = {
                     'product_title': line.product.title,
