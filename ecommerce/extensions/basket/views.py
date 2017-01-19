@@ -4,6 +4,7 @@ from datetime import datetime
 import logging
 
 import waffle
+from django.core.urlresolvers import reverse
 from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.utils.translation import ugettext_lazy as _
 from opaque_keys.edx.keys import CourseKey
@@ -15,9 +16,10 @@ from slumber.exceptions import SlumberBaseException
 from ecommerce.core.constants import ENROLLMENT_CODE_PRODUCT_CLASS_NAME, SEAT_PRODUCT_CLASS_NAME
 from ecommerce.core.exceptions import SiteConfigurationError
 from ecommerce.core.url_utils import get_lms_url
+from ecommerce.courses.models import Course
 from ecommerce.courses.utils import get_certificate_type_display_value, get_course_info_from_catalog, mode_for_seat
 from ecommerce.extensions.analytics.utils import prepare_analytics_data
-from ecommerce.extensions.basket.utils import get_basket_switch_data, prepare_basket
+from ecommerce.extensions.basket.utils import get_basket_switch_data, get_enrollment_code, prepare_basket
 from ecommerce.extensions.offer.utils import format_benefit_value
 from ecommerce.extensions.partner.shortcuts import get_partner_for_site
 from ecommerce.extensions.payment.constants import CLIENT_SIDE_CHECKOUT_FLAG_NAME
@@ -135,7 +137,7 @@ class BasketSummaryView(BasketView):
             * verification message should be displayed
             * voucher form should be displayed
             * switch link (for switching between seat and enrollment code products) should be displayed
-        and returns that information for the basket view context to be updated with it.
+        and returns that information for the basket view context to updated with it.
 
         Args:
             lines (list): List of basket lines.
@@ -180,6 +182,9 @@ class BasketSummaryView(BasketView):
             line_data.update({
                 'benefit_value': benefit_value,
                 'enrollment_code': line.product.get_product_class().name == ENROLLMENT_CODE_PRODUCT_CLASS_NAME,
+                'has_enrollment_code': True if get_enrollment_code(
+                    self.request.site.siteconfiguration, line.product
+                ) else False,
                 'line': line,
                 'seat_type': self._determine_seat_type(line.product),
             })
@@ -228,6 +233,12 @@ class BasketSummaryView(BasketView):
                                                      sc=site_configuration.id)
             raise SiteConfigurationError(msg)
 
+    def _client_side_checkout_enabled(self):
+        return (
+            self.request.site.siteconfiguration.client_side_payment_processor and
+            waffle.flag_is_active(self.request, CLIENT_SIDE_CHECKOUT_FLAG_NAME)
+        )
+
     def get_context_data(self, **kwargs):
         context = super(BasketSummaryView, self).get_context_data(**kwargs)
         formset = context.get('formset', [])
@@ -249,8 +260,7 @@ class BasketSummaryView(BasketView):
         })
 
         payment_processors = site_configuration.get_payment_processors()
-        if site_configuration.client_side_payment_processor \
-                and waffle.flag_is_active(self.request, CLIENT_SIDE_CHECKOUT_FLAG_NAME):
+        if self._client_side_checkout_enabled():
             payment_processors_data = self._get_payment_processors_data(payment_processors)
             context.update(payment_processors_data)
 
@@ -275,6 +285,53 @@ class BasketSummaryView(BasketView):
             'total_benefit': total_benefit
         })
         return context
+
+    def post(self, *args, **kwargs):
+        """Overrides the default basket post() method. If client side checkout is enabled
+        a special logic for handling enrollment code products is applied.
+
+        For now applies only for single-item baskets. If the quantity POST argument is sent
+        it means the quantity field has been updated, all items from the basket are removed
+        and we can go ahead with the special logic which has the following rules:
+            * if the quantity is more than one, the user can only buy enrollment codes
+            * if the quantity is one:
+                * if 'add-enrollment-code' argument has been posted, which means the user
+                  checked the checkbox for enrollment codes, an enrollment code is added to
+                  the basket
+                * if the quantity is updated to 1 but the 'enrollment-code-selected' argument
+                  has been posted, which means the user has already checked the checkbox for
+                  enrollment codes before, an enrollment code is added to the basket
+                * if the quantity is updated to 1 and the user has not checked the checkbox
+                  for enrollment codes, either now or previously, a seat is added to the basket
+
+        More info about these use cases here: https://openedx.atlassian.net/browse/SOL-2176
+
+        """
+        if self._client_side_checkout_enabled():
+            basket = self.request.basket
+            if basket.lines.count() == 1:
+                product = basket.lines.first().product
+                quantity_in_post = self.request.POST.get('form-0-quantity')
+
+                if quantity_in_post:
+                    quantity = int(quantity_in_post)
+                    enrollment_code = get_enrollment_code(self.request.site.siteconfiguration, product)
+                    basket.flush()
+
+                    if quantity > 1:
+                        basket.add(enrollment_code, quantity)
+                    elif quantity == 1:
+                        add_enrollment_code = self.request.POST.get('add-enrollment-code')
+                        enrollment_code_selected = self.request.POST.get('enrollment-code-selected')
+
+                        if add_enrollment_code or enrollment_code_selected == 'yes':
+                            basket.add(enrollment_code, quantity)
+                        elif product.get_product_class().name == ENROLLMENT_CODE_PRODUCT_CLASS_NAME:
+                            course = Course.objects.get(id=product.attr.course_key)
+                            seat = course.get_seat_from_enrollment_code(product)
+                            basket.add(seat, 1)
+                    return HttpResponseRedirect(reverse('basket:summary'))
+        return super(BasketSummaryView, self).post(*args, **kwargs)
 
 
 class VoucherAddMessagesView(VoucherAddView):
