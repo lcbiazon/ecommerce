@@ -7,8 +7,10 @@ from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
 from oscar.core.loading import get_class, get_model
 import pytz
+import waffle
 
-from ecommerce.core.constants import ENROLLMENT_CODE_PRODUCT_CLASS_NAME, SEAT_PRODUCT_CLASS_NAME
+from ecommerce.courses.models import Course
+from ecommerce.core.constants import ENROLLMENT_CODE_PRODUCT_CLASS_NAME, ENROLLMENT_CODE_SWITCH, SEAT_PRODUCT_CLASS_NAME
 from ecommerce.referrals.models import Referral
 
 Applicator = get_class('offer.utils', 'Applicator')
@@ -159,3 +161,23 @@ def _record_utm_basket_attribution(referral, request):
         created_at_datetime = None
 
     referral.utm_created_at = created_at_datetime
+
+
+def get_enrollment_code(siteconfiguration, seat):
+    """Retrieves the enrollment code of a seat if enrollment codes are enabled globally (waffle switch)
+    and for the particular site from which the request came.
+
+    Args:
+        siteconfiguration (SiteConfiguration): The configuration of the site from which the request came.
+        seat (Product): The seat for which the enrollment code is retreived.
+    Returns:
+        Either the enrollment code product or None if:
+            * enrollment codes are globally disabled
+            * enrollment codes are disabled for the passed site configuration
+            * passed seat does not have an enrollment code
+    """
+    if waffle.switch_is_active(ENROLLMENT_CODE_SWITCH) and siteconfiguration.enable_enrollment_codes:
+        course = Course.objects.get(id=seat.attr.course_key)
+        return course.enrollment_code_product
+    else:
+        return None

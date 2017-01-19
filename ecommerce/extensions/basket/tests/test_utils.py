@@ -12,13 +12,13 @@ import pytz
 from ecommerce.core.constants import ENROLLMENT_CODE_PRODUCT_CLASS_NAME, ENROLLMENT_CODE_SWITCH
 from ecommerce.core.tests import toggle_switch
 from ecommerce.courses.tests.factories import CourseFactory
-from ecommerce.extensions.basket.utils import prepare_basket, attribute_cookie_data
+from ecommerce.extensions.basket.utils import get_enrollment_code, attribute_cookie_data, prepare_basket
 from ecommerce.extensions.catalogue.tests.mixins import CourseCatalogTestMixin
-from ecommerce.tests.mixins import UserMixin
 from ecommerce.extensions.partner.models import StockRecord
 from ecommerce.extensions.test.factories import prepare_voucher
 from ecommerce.referrals.models import Referral
 from ecommerce.tests.factories import SiteConfigurationFactory
+from ecommerce.tests.mixins import UserMixin
 from ecommerce.tests.testcases import TestCase
 
 Benefit = get_model('offer', 'Benefit')
@@ -61,10 +61,7 @@ class BasketUtilsTests(CourseCatalogTestMixin, TestCase):
 
     def test_prepare_basket_enrollment_with_voucher(self):
         """Verify the basket does not contain a voucher if enrollment code is added to it."""
-        course = CourseFactory()
-        toggle_switch(ENROLLMENT_CODE_SWITCH, True)
-        course.create_or_update_seat('verified', False, 10, self.partner, create_enrollment_code=True)
-        enrollment_code = Product.objects.get(product_class__name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME)
+        __, enrollment_code = self.prepare_seat_with_enrollment_code()
         voucher, product = prepare_voucher()
 
         basket = prepare_basket(self.request, product, voucher)
@@ -281,6 +278,44 @@ class BasketUtilsTests(CourseCatalogTestMixin, TestCase):
         # test referral record is deleted when no cookies are set
         with self.assertRaises(Referral.DoesNotExist):
             Referral.objects.get(basket_id=basket.id)
+
+    def prepare_seat_with_enrollment_code(self):
+        """Helper function for creating a seat with an enrollment code."""
+        course = CourseFactory()
+        toggle_switch(ENROLLMENT_CODE_SWITCH, True)
+        self.request.site.siteconfiguration.enable_enrollment_codes = True
+        self.request.site.siteconfiguration.save()
+        seat = course.create_or_update_seat('verified', False, 10, self.partner, create_enrollment_code=True)
+        enrollment_code = Product.objects.get(product_class__name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME)
+        return seat, enrollment_code
+
+    def test_get_enrollment_code(self):
+        """Verify the function returns an enrollment code for the passed seat."""
+        seat, enrollment_code = self.prepare_seat_with_enrollment_code()
+        retreived_ec = get_enrollment_code(self.request.site.siteconfiguration, seat)
+        self.assertEqual(retreived_ec, enrollment_code)
+
+    def test_get_enrollment_code_not_existing(self):
+        """Verify function returns None for seats that do not have enrollment code."""
+        seat = CourseFactory().create_or_update_seat('verified', False, 10, self.partner)
+        retreived_ec = get_enrollment_code(self.request.site.siteconfiguration, seat)
+        self.assertIsNone(retreived_ec)
+
+    def test_get_enrollment_code_disabled(self):
+        """Verify None is returned when enrollment codes are disabled."""
+        seat, enrollment_code = self.prepare_seat_with_enrollment_code()
+        retreived_ec = get_enrollment_code(self.request.site.siteconfiguration, seat)
+        self.assertEqual(retreived_ec, enrollment_code)
+
+        toggle_switch(ENROLLMENT_CODE_SWITCH, False)
+        retreived_ec = get_enrollment_code(self.request.site.siteconfiguration, seat)
+        self.assertIsNone(retreived_ec)
+
+        toggle_switch(ENROLLMENT_CODE_SWITCH, True)
+        self.request.site.siteconfiguration.enable_enrollment_codes = False
+        self.request.site.siteconfiguration.save()
+        retreived_ec = get_enrollment_code(self.request.site.siteconfiguration, seat)
+        self.assertIsNone(retreived_ec)
 
 
 class BasketUtilsTransactionTests(UserMixin, TransactionTestCase):

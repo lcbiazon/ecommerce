@@ -309,3 +309,13 @@ class CourseTests(CourseCatalogTestMixin, TestCase):
         # One parent product, three seat products, one enrollment code product (verified) -> five total products
         self.assertEqual(course.products.count(), 5)
         self.assertEqual(len(course.seat_products), 3)  # Definitely three seat products...
+
+    def test_get_seat_from_enrollment_code(self):
+        """Verify method returns the correct seat from the passed enrollment code."""
+        toggle_switch(ENROLLMENT_CODE_SWITCH, True)
+        course = CourseFactory()
+        seat = course.create_or_update_seat('verified', True, 10, self.partner, create_enrollment_code=True)
+        enrollment_code = Product.objects.get(product_class__name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME)
+
+        retreived_seat = course.get_seat_from_enrollment_code(enrollment_code)
+        self.assertEqual(seat, retreived_seat)

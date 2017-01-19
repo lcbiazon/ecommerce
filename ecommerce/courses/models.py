@@ -272,6 +272,13 @@ class Course(models.Model):
         except Product.DoesNotExist:
             return None
 
+    def get_seat_from_enrollment_code(self, enrollment_code):
+        """ Returns the seat for the matching enrollment code. """
+        return self.seat_products.get(
+            attributes__name='certificate_type',
+            attribute_values__value_text=enrollment_code.attr.seat_type
+        )
+
     def _create_or_update_enrollment_code(self, seat_type, id_verification_required, partner, price):
         """
         Creates an enrollment code product and corresponding stock record for the specified seat.
