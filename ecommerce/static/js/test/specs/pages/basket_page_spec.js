@@ -211,6 +211,74 @@ define([
                 });
             });
 
+            describe('Enrollment code logic', function() {
+
+                beforeEach(function() {
+                    $(
+                        '<div id="summary"><form><div class="product"><div class="form-inline">' +
+                        '<input type="hidden" name="product-type" value="seat">' +
+                        '<input type="hidden" name="enrollment-code-selected" value="no">' +
+                        '<div class="checkout-quantity"><div class="input-group spinner">' +
+                        '<input class="quantity" name="form-0-quantity" type="number" value="1"></div>' +
+                        '<button class="update-button" type="submit">Update</button></div>' +
+                        '<div class="ec-checkbox">' +
+                        '<input type="checkbox" value="checked" name="add-enrollment-code"></div>' +
+                        '</div></div></form></div>'
+                    ).appendTo('body');
+
+                });
+
+                it('should change values on enrollment code checkbox change', function() {
+                    // Disable page reload triggered by form submit.
+                    $('form').on('submit', function() {
+                        return false;
+                    });
+                    BasketPage.onReady();
+                    $('input[name=add-enrollment-code]').prop('checked', true).trigger('change');
+
+                    expect($('input[name=add-enrollment-code]').prop('checked')).toBeTruthy();
+                    expect($('input[name=enrollment-code-selected]').val()).toEqual('yes');
+                    expect(sessionStorage.getItem('enrollmentCodeSelected')).toBeTruthy();
+                });
+
+                it('should set hidden input based on sessoinStorage item', function() {
+                    expect($('input[name=enrollment-code-selected]').val()).toEqual('no');
+                    sessionStorage.setItem('enrollmentCodeSelected', true);
+                    BasketPage.onReady();
+                    expect($('input[name=enrollment-code-selected]').val()).toEqual('yes');
+                });
+
+                it('should change checkbox on product-type change', function() {
+                    $('input[name=product-type]').val('enrollment-code');
+                    BasketPage.onReady();
+                    expect($('input[name=add-enrollment-code]').prop('checked')).toBeTruthy();
+                    expect($('input[name=add-enrollment-code]').prop('disabled')).toBeFalsy();
+                });
+
+                it('should change checkbox on product-type change and quantity value', function() {
+                    $('input[name=product-type]').val('enrollment-code');
+                    $('.spinner input').val(5);
+                    BasketPage.onReady();
+                    expect($('input[name=add-enrollment-code]').prop('checked')).toBeTruthy();
+                    expect($('input[name=add-enrollment-code]').prop('disabled')).toBeTruthy();
+                });
+
+                it('should change checkbox on sessionStorage item', function() {
+                    sessionStorage.setItem('enrollmentCodeSelected', true);
+                    BasketPage.onReady();
+                    expect($('input[name=add-enrollment-code]').prop('checked')).toBeTruthy();
+                    expect($('input[name=add-enrollment-code]').prop('disabled')).toBeFalsy();
+                });
+
+                it('should change checkbox on product-type change and quantity value', function() {
+                    sessionStorage.setItem('enrollmentCodeSelected', true);
+                    $('.spinner input').val(5);
+                    BasketPage.onReady();
+                    expect($('input[name=add-enrollment-code]').prop('checked')).toBeTruthy();
+                    expect($('input[name=add-enrollment-code]').prop('disabled')).toBeTruthy();
+                });
+            });
+
             describe('clientSideCheckoutValidation', function() {
             var cc_expiry_months = {
                     JAN: '01',

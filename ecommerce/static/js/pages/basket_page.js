@@ -297,6 +297,29 @@ define([
                 cardHolderInfoValidation(e);
             });
 
+            $('input[name=add-enrollment-code]').on('change', function() {
+                if ($('input[name=add-enrollment-code]').prop('checked')) {
+                    $('input[name=enrollment-code-selected]').val('yes');
+                    sessionStorage.setItem('enrollmentCodeSelected', true);
+                } else {
+                    $('input[name=enrollment-code-selected]').val('no');
+                    sessionStorage.removeItem('enrollmentCodeSelected', true);
+                }
+                $('#summary > form').submit();
+            });
+
+            if (sessionStorage.getItem('enrollmentCodeSelected')) {
+                $('input[name=enrollment-code-selected]').val('yes');
+            }
+
+            if ($('input[name=product-type]').val() === 'enrollment-code' ||
+                sessionStorage.getItem('enrollmentCodeSelected')) {
+                $('input[name=add-enrollment-code]').prop('checked', true);
+                if (Number($('.spinner input').val()) > 1) {
+                    $('input[name=add-enrollment-code]').prop('disabled', true);
+                }
+            }
+
             $paymentButtons.find('.payment-button').click(function (e) {
                 var $btn = $(e.target),
                     deferred = new $.Deferred(),
