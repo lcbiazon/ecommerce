@@ -66,7 +66,7 @@ def clean_field_value(value):
     return re.sub(r'[\^:"\']', '', value)
 
 
-def sdn_check(request, full_name, address, country):
+def sdn_check(request, full_name, country):
     """
     Call SDN check API to check if the user is on the US Treasury Department OFAC list.
 
@@ -80,7 +80,7 @@ def sdn_check(request, full_name, address, country):
     """
     site_config = request.site.siteconfiguration
     basket = Basket.get_basket(request.user, request.site)
-    response = requests.get(site_config.sdn_check_url(full_name, address, country))
+    response = requests.get(site_config.sdn_check_url(full_name, country))
 
     if response.status_code != status.HTTP_200_OK:
         logger.info(
