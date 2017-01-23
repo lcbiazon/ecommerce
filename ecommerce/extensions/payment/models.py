@@ -49,17 +49,17 @@ class PaypalProcessorConfiguration(SingletonModel):
 class SDNCheckFailure(models.Model):
     """ Record of SDN check failure. """
     full_name = models.CharField(max_length=255)
-    address = models.CharField(max_length=255)
     country = models.CharField(max_length=255)
     sdn_check_response = JSONField()
     basket = models.ForeignKey('basket.Basket')
     created = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):
-        return u'{full_name} - basket [{basket_id}]'.format(
+        return _(u'{full_name} [{country}] - basket [{basket_id}]'.format(
             full_name=self.full_name,
+            country=self.country,
             basket_id=self.basket.id
-        )
+        ))
 
     class Meta(object):
         verbose_name = "SDN Check Failure"

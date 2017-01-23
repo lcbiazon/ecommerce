@@ -73,7 +73,6 @@ def sdn_check(request, full_name, address, country):
     Arguments:
         request (Request): The request object made to the view.
         full_name(str): Full name of the user who is checked.
-        address(str): User's address.
         country(str): User's country.
 
     Returns:
@@ -94,7 +93,6 @@ def sdn_check(request, full_name, address, country):
     else:
         SDNCheckFailure.objects.create(
             full_name=full_name,
-            address=address,
             country=country,
             sdn_check_response=response.content,
             basket=basket

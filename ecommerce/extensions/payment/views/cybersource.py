@@ -99,7 +99,7 @@ class CybersourceSubmitView(FormView):
             first_name=data['first_name'],
             last_name=data['last_name']
         )
-        if not sdn_check(request, full_name, data['address_line1'], data['country']):
+        if not sdn_check(request, full_name, data['country']):
             error_msg = _('SDN check failed.')
             return self._basket_error_response(error_msg)
 
