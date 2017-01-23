@@ -70,8 +70,10 @@ require([
                                     field.focus();
                                 }
                             }
+                        } else if (error.sdn_failure) {
+                            window.location.href = '/payment/sdn-failure/';
                         } else {
-                            console.log(jqXHR);
+                            // Unhandled error types should default to the general payment error page.
                             window.location.href = '/payment/error/';
                         }
                     }

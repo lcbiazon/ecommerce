@@ -5,7 +5,7 @@ from oscar.apps.payment.admin import *  # noqa pylint: disable=wildcard-import,u
 from oscar.core.loading import get_model
 from solo.admin import SingletonModelAdmin
 
-from ecommerce.extensions.payment.models import SDNCheckFailure
+from ecommerce.extensions.payment.models import SdnCheckFailure
 
 PaymentProcessorResponse = get_model('payment', 'PaymentProcessorResponse')
 PaypalProcessorConfiguration = get_model('payment', 'PaypalProcessorConfiguration')
@@ -38,4 +38,4 @@ class PaymentProcessorResponseAdmin(admin.ModelAdmin):
 
 
 admin.site.register(PaypalProcessorConfiguration, SingletonModelAdmin)
-admin.site.register(SDNCheckFailure)
+admin.site.register(SdnCheckFailure)

@@ -8,7 +8,7 @@ from django.utils.translation import ugettext_lazy as _
 from oscar.core.loading import get_model
 from rest_framework import status
 
-from ecommerce.extensions.payment.models import SDNCheckFailure
+from ecommerce.extensions.payment.models import SdnCheckFailure
 
 logger = logging.getLogger(__name__)
 Basket = get_model('basket', 'Basket')
@@ -91,7 +91,7 @@ def sdn_check(request, full_name, country):
     elif json.loads(response.content)['total'] == 0:
         return True
     else:
-        SDNCheckFailure.objects.create(
+        SdnCheckFailure.objects.create(
             full_name=full_name,
             country=country,
             sdn_check_response=response.content,

@@ -65,19 +65,15 @@ class CybersourceSubmitView(FormView):
         kwargs['user'] = self.request.user
         return kwargs
 
-    def _basket_error_response(self, error_msg):
-        data = {
-            'error': error_msg,
-        }
-        return JsonResponse(data, status=400)
-
     def form_invalid(self, form):
         errors = {field: error[0] for field, error in form.errors.iteritems()}
         logger.debug(errors)
 
         if errors.get('basket'):
-            error_msg = _('There was a problem retrieving your basket. Refresh the page to try again.')
-            return self._basket_error_response(error_msg)
+            return JsonResponse(
+                {'error': _('There was a problem retrieving your basket. Refresh the page to try again.')},
+                status=400
+            )
 
         return JsonResponse({'field_errors': errors}, status=400)
 
@@ -92,16 +88,17 @@ class CybersourceSubmitView(FormView):
         if basket.status != Basket.OPEN:
             logger.debug('Basket %d must be in the "Open" state. It is currently in the "%s" state.',
                          basket.id, basket.status)
-            error_msg = _('Your basket may have been modified or already purchased. Refresh the page to try again.')
-            return self._basket_error_response(error_msg)
+            return JsonResponse(
+                {'error': _('Your basket may have been modified or already purchased. Refresh the page to try again.')},
+                status=400
+            )
 
         full_name = '{first_name} {last_name}'.format(
             first_name=data['first_name'],
             last_name=data['last_name']
         )
         if not sdn_check(request, full_name, data['country']):
-            error_msg = _('SDN check failed.')
-            return self._basket_error_response(error_msg)
+            return JsonResponse({'sdn_failure': _('SDN check failed.')}, status=400)
 
         basket.strategy = request.strategy
         Applicator().apply(basket, user, self.request)

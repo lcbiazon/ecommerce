@@ -4,7 +4,7 @@ import httpretty
 from django.test import RequestFactory
 from oscar.test.factories import BasketFactory
 
-from ecommerce.extensions.payment.models import SDNCheckFailure
+from ecommerce.extensions.payment.models import SdnCheckFailure
 from ecommerce.extensions.payment.utils import clean_field_value, middle_truncate, sdn_check
 from ecommerce.tests.factories import SiteConfigurationFactory
 from ecommerce.tests.testcases import TestCase
@@ -62,8 +62,8 @@ class SDNCheckTests(TestCase):
 
     def assert_sdn_check_failure(self, basket, response):
         """ Assert an SDN check failure is logged and has the correct values. """
-        self.assertEqual(SDNCheckFailure.objects.count(), 1)
-        sdn_object = SDNCheckFailure.objects.first()
+        self.assertEqual(SdnCheckFailure.objects.count(), 1)
+        sdn_object = SdnCheckFailure.objects.first()
         self.assertEqual(sdn_object.full_name, self.username)
         self.assertEqual(sdn_object.country, self.country)
         self.assertEqual(sdn_object.sdn_check_response, response)
@@ -74,7 +74,7 @@ class SDNCheckTests(TestCase):
         """ Verify the check returns true in case of a connection error. """
         self.mock_sdn_response({}, status_code=400)
         BasketFactory(owner=self.request.user, site=self.request.site)
-        self.assertEqual(SDNCheckFailure.objects.count(), 0)
+        self.assertEqual(SdnCheckFailure.objects.count(), 0)
         self.assertTrue(sdn_check(self.request, self.username, self.country))
 
     @httpretty.activate
@@ -83,7 +83,7 @@ class SDNCheckTests(TestCase):
         sdn_response = {'total': 1}
         self.mock_sdn_response(sdn_response)
         basket = BasketFactory(owner=self.request.user, site=self.request.site)
-        self.assertEqual(SDNCheckFailure.objects.count(), 0)
+        self.assertEqual(SdnCheckFailure.objects.count(), 0)
         self.assertFalse(sdn_check(self.request, self.username, self.country))
 
         self.assert_sdn_check_failure(basket, json.dumps(sdn_response))
@@ -93,6 +93,6 @@ class SDNCheckTests(TestCase):
         """ Verify the SDN check returns true if the user passed and no failure is saved. """
         self.mock_sdn_response({'total': 0})
         BasketFactory(owner=self.request.user, site=self.request.site)
-        self.assertEqual(SDNCheckFailure.objects.count(), 0)
+        self.assertEqual(SdnCheckFailure.objects.count(), 0)
         self.assertTrue(sdn_check(self.request, self.username, self.country))
-        self.assertEqual(SDNCheckFailure.objects.count(), 0)
+        self.assertEqual(SdnCheckFailure.objects.count(), 0)

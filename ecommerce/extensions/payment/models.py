@@ -46,7 +46,7 @@ class PaypalProcessorConfiguration(SingletonModel):
         verbose_name = "Paypal Processor Configuration"
 
 
-class SDNCheckFailure(models.Model):
+class SdnCheckFailure(models.Model):
     """ Record of SDN check failure. """
     full_name = models.CharField(max_length=255)
     country = models.CharField(max_length=255)
