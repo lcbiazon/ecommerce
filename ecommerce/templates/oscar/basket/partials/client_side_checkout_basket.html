@@ -32,6 +32,7 @@
                 {% if line_data.enrollment_code or line_data.has_enrollment_code %}
                     <div class="col-sm-12 col-xs-12 form-inline">
                         <input type="hidden" name="product-type" value="{% if line_data.enrollment_code %}enrollment-code{% else %}seat{% endif %}">
+                        <input type="hidden" name="course-id" value="{{ line_data.course_key }}">
                         <input type="hidden" name="enrollment-code-selected" value="no">
                         <label class="product-price-label text-muted">{% trans 'Quantity' %}</label>
                         <div class="checkout-quantity form-group">

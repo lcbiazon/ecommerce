@@ -212,6 +212,8 @@ define([
             });
 
             describe('Enrollment code logic', function() {
+                var enrollmentCodeSessionItemName = 'enrollmentCodeSelected',
+                    courseId = 'test/test/test';
 
                 beforeEach(function() {
                     $(
@@ -225,7 +227,6 @@ define([
                         '<input type="checkbox" value="checked" name="add-enrollment-code"></div>' +
                         '</div></div></form></div>'
                     ).appendTo('body');
-
                 });
 
                 it('should change values on enrollment code checkbox change', function() {
@@ -238,12 +239,12 @@ define([
 
                     expect($('input[name=add-enrollment-code]').prop('checked')).toBeTruthy();
                     expect($('input[name=enrollment-code-selected]').val()).toEqual('yes');
-                    expect(sessionStorage.getItem('enrollmentCodeSelected')).toBeTruthy();
+                    expect(sessionStorage.getItem(enrollmentCodeSessionItemName)).toBeTruthy();
                 });
 
-                it('should set hidden input based on sessoinStorage item', function() {
+                it('should set hidden input based on sessionStorage item', function() {
                     expect($('input[name=enrollment-code-selected]').val()).toEqual('no');
-                    sessionStorage.setItem('enrollmentCodeSelected', true);
+                    Utils.getOrCreateSessionItem(enrollmentCodeSessionItemName, {courseId: true});
                     BasketPage.onReady();
                     expect($('input[name=enrollment-code-selected]').val()).toEqual('yes');
                 });
@@ -264,14 +265,14 @@ define([
                 });
 
                 it('should change checkbox on sessionStorage item', function() {
-                    sessionStorage.setItem('enrollmentCodeSelected', true);
+                    Utils.getOrCreateSessionItem(enrollmentCodeSessionItemName, {courseId: true});
                     BasketPage.onReady();
                     expect($('input[name=add-enrollment-code]').prop('checked')).toBeTruthy();
                     expect($('input[name=add-enrollment-code]').prop('disabled')).toBeFalsy();
                 });
 
                 it('should change checkbox on product-type change and quantity value', function() {
-                    sessionStorage.setItem('enrollmentCodeSelected', true);
+                    Utils.getOrCreateSessionItem(enrollmentCodeSessionItemName, {courseId: true});
                     $('.spinner input').val(5);
                     BasketPage.onReady();
                     expect($('input[name=add-enrollment-code]').prop('checked')).toBeTruthy();

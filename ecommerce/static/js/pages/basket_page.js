@@ -165,7 +165,10 @@ define([
 
         onReady = function() {
             var $paymentButtons = $('.payment-buttons'),
-                basketId = $paymentButtons.data('basket-id');
+                basketId = $paymentButtons.data('basket-id'),
+                enrollmentCodeSessionItemName = 'enrollmentCodeSelected',
+                courseId = $('input[name=course-id]').val(),
+                sessionItem = Utils.getOrCreateSessionItem(enrollmentCodeSessionItemName, false);
 
             $('#voucher_form_link').on('click', function(event) {
                 event.preventDefault();
@@ -298,22 +301,23 @@ define([
             });
 
             $('input[name=add-enrollment-code]').on('change', function() {
+                var sessionItem = {};
                 if ($('input[name=add-enrollment-code]').prop('checked')) {
                     $('input[name=enrollment-code-selected]').val('yes');
-                    sessionStorage.setItem('enrollmentCodeSelected', true);
+                    sessionItem[courseId] = true;
                 } else {
                     $('input[name=enrollment-code-selected]').val('no');
-                    sessionStorage.removeItem('enrollmentCodeSelected', true);
+                    sessionItem[courseId] = false;
                 }
+                Utils.getOrCreateSessionItem(enrollmentCodeSessionItemName, sessionItem);
                 $('#summary > form').submit();
             });
 
-            if (sessionStorage.getItem('enrollmentCodeSelected')) {
+            if (sessionItem[courseId]) {
                 $('input[name=enrollment-code-selected]').val('yes');
             }
 
-            if ($('input[name=product-type]').val() === 'enrollment-code' ||
-                sessionStorage.getItem('enrollmentCodeSelected')) {
+            if ($('input[name=product-type]').val() === 'enrollment-code' || sessionItem[courseId]) {
                 $('input[name=add-enrollment-code]').prop('checked', true);
                 if (Number($('.spinner input').val()) > 1) {
                     $('input[name=add-enrollment-code]').prop('disabled', true);

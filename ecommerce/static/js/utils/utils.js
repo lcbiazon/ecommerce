@@ -162,6 +162,24 @@ define([
                         el.setAttribute('datepicker-initialized', 'true');
                     }
                 });
+            },
+
+            /**
+             * Gets or creates/updates a sessionStorage item. If itemValue is false/null
+             * only returns the sessionStorage item without updating it, if no sessionStorage
+             * item was found, returns an emtpy object.
+             *
+             * @param {String} itemName - SessionStorage item key name.
+             * @param {Object} itemValue - Object that is set or updated for the passed key.
+             */
+            getOrCreateSessionItem: function(itemName, itemValue) {
+                var sessionItem = JSON.parse(sessionStorage.getItem(itemName)) || {};
+                if (itemValue) {
+                    var key = _.keys(itemValue);
+                    sessionItem[key] = itemValue[key];
+                    sessionStorage.setItem(itemName, JSON.stringify(sessionItem));
+                }
+                return sessionItem;
             }
         };
     }
