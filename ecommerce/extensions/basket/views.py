@@ -53,6 +53,15 @@ class BasketSingleItemView(View):
         except StockRecord.DoesNotExist:
             return HttpResponseBadRequest(_('SKU [{sku}] does not exist.').format(sku=sku))
 
+        if voucher is None:
+            # Find and apply the enterprise entitlement on the learner basket
+            enterprise_voucher = get_entitlement_voucher(request, product)
+            if enterprise_voucher:
+                # Learner getting discount from the Enterprise, with which
+                # this learner is associated
+                voucher = enterprise_voucher
+                self.request.basket.vouchers.add(voucher)
+
         # If the product isn't available then there's no reason to continue with the basket addition
         purchase_info = request.strategy.fetch_for_product(product)
         if not purchase_info.availability.is_available_to_buy:
@@ -178,13 +187,6 @@ class BasketSummaryView(BasketView):
                 benefit_value = format_benefit_value(benefit)
             else:
                 benefit_value = None
-
-            # Find and apply the enterprise entitlement on the learner basket
-            voucher = get_entitlement_voucher(self.request, line.product)
-            if voucher:
-                # Learner getting discount from the Enterprise, with which
-                # this learner is associated
-                self.request.basket.vouchers.add(voucher)
 
             line_data.update({
                 'benefit_value': benefit_value,

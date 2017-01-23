@@ -5,7 +5,6 @@ from django.conf import settings
 import waffle
 
 
-
 def is_enterprise_feature_enabled():
     """
     Returns boolean indicating whether enterprise feature is enabled or
