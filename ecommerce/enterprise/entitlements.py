@@ -8,9 +8,11 @@ from oscar.core.loading import get_model
 from ecommerce.coupons.views import voucher_is_valid
 from ecommerce.enterprise.tmp import utils
 from ecommerce.enterprise.utils import is_enterprise_feature_enabled
+from ecommerce.extensions.api.serializers import retrieve_offer, retrieve_voucher
 
 
 logger = logging.getLogger(__name__)
+Product = get_model('catalogue', 'Product')
 Voucher = get_model('voucher', 'Voucher')
 
 
@@ -47,10 +49,13 @@ def get_vouchers_for_learner(site, learner):
     entitlements = get_entitlements_for_learner(site, learner)
     for entitlement in entitlements:
         try:
-            voucher = Voucher.objects.get(id=entitlement['entitlement_id'])
-            vouchers.append(voucher)
-        except Voucher.DoesNotExist:
-            logger.warning('No voucher found with the entitlement id %s', entitlement['entitlement_id'])
+            coupon_product = Product.objects.filter(product_class__name='Coupon').get(id=entitlement['entitlement_id'])
+        except Product.DoesNotExist:
+            logger.warning('No coupon product found with the entitlement id %s', entitlement['entitlement_id'])
+            return vouchers
+
+        entitlement_voucher = retrieve_voucher(coupon_product)
+        vouchers.append(entitlement_voucher)
 
     return vouchers
 
@@ -81,7 +86,7 @@ def get_entitlements_for_learner(site, learner):
     entitlements = enterprise_learner_data[0]['enterprise_customer']['entitlements']
     return entitlements
 
-@utils.dummy_data("enterprise_api_response_for_learner")
+@utils.dummy_data('enterprise_api_response_for_learner')
 def get_enterprise_learner_data(site, learner):
     """
     Fetch data related to enterprise learners.
