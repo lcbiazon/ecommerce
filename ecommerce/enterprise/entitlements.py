@@ -20,7 +20,7 @@ from ecommerce.coupons.utils import get_catalog_course_runs
 from ecommerce.coupons.views import voucher_is_valid
 from ecommerce.courses.utils import get_course_catalogs
 from ecommerce.enterprise.utils import is_enterprise_feature_enabled
-from ecommerce.extensions.api.serializers import retrieve_offer, retrieve_voucher
+from ecommerce.extensions.api.serializers import retrieve_voucher
 
 
 logger = logging.getLogger(__name__)
@@ -102,7 +102,7 @@ def get_entitlements_for_learner(site, learner):
     try:
         entitlements = enterprise_learner_data[0]['enterprise_customer']['entitlements']
     except KeyError:
-        logger.info('Invalid structure for enterprise learner API response', learner.username)
+        logger.info('Invalid structure for enterprise learner API response')
         return []
 
     return entitlements
