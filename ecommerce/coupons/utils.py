@@ -39,7 +39,7 @@ def get_range_catalog_query_results(limit, query, site, offset=None):
     return response
 
 
-def get_all_range_catalog_query_results(site, query):
+def get_catalog_course_runs(site, query):
     """
     Get all catalogs on the basis of provided query from the Course Catalog
     API by recursively retrieving API endpoint.

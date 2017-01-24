@@ -55,12 +55,7 @@ class BasketSingleItemView(View):
 
         if voucher is None:
             # Find and apply the enterprise entitlement on the learner basket
-            enterprise_voucher = get_entitlement_voucher(request, product)
-            if enterprise_voucher:
-                # Learner getting discount from the Enterprise, with which
-                # this learner is associated
-                voucher = enterprise_voucher
-                self.request.basket.vouchers.add(voucher)
+            voucher = get_entitlement_voucher(request, product)
 
         # If the product isn't available then there's no reason to continue with the basket addition
         purchase_info = request.strategy.fetch_for_product(product)

@@ -7,14 +7,16 @@ customers with which they are affiliated. The coupon product id's for the
 enterprise entitlements are provided by the Enterprise Service on the bases
 the learner's enterprise eligibility criterion.
 """
+import hashlib
 import logging
 
 from django.conf import settings
+from django.core.cache import cache
 from oscar.core.loading import get_model
 from requests.exceptions import ConnectionError, Timeout
 from slumber.exceptions import SlumberBaseException
 
-from ecommerce.coupons.utils import get_all_range_catalog_query_results
+from ecommerce.coupons.utils import get_catalog_course_runs
 from ecommerce.coupons.views import voucher_is_valid
 from ecommerce.courses.utils import get_course_catalogs
 from ecommerce.enterprise.utils import is_enterprise_feature_enabled
@@ -45,6 +47,7 @@ def get_entitlement_voucher(request, product):
 
     return entitlement_voucher
 
+
 def get_vouchers_for_learner(site, learner):
     """
     Get vouchers against the list of all enterprise entitlements for the
@@ -61,7 +64,7 @@ def get_vouchers_for_learner(site, learner):
         try:
             coupon_product = Product.objects.filter(product_class__name='Coupon').get(id=entitlement['entitlement_id'])
         except Product.DoesNotExist:
-            logger.warning(
+            logger.exception(
                 'There was an error getting coupon product with the entitlement id %s',
                 entitlement['entitlement_id']
             )
@@ -71,6 +74,7 @@ def get_vouchers_for_learner(site, learner):
         vouchers.append(entitlement_voucher)
 
     return vouchers
+
 
 def get_entitlements_for_learner(site, learner):
     """
@@ -82,22 +86,27 @@ def get_entitlements_for_learner(site, learner):
         site: (django.contrib.sites.Site) site instance
 
     """
-    entitlements = []
     try:
         enterprise_learner_data = get_enterprise_learner_data(site, learner)['results']
-    except (ConnectionError, SlumberBaseException, Timeout):
+    except (ConnectionError, SlumberBaseException, Timeout, KeyError):
         logger.exception(
             'Failed to retrieve enterprise info for the learner [%s]',
             learner.username
         )
-        return entitlements
+        return []
 
     if len(enterprise_learner_data) == 0:
         logger.info('Learner with username %s in not affiliated with any enterprise', learner.username)
-        return entitlements
+        return []
 
-    entitlements = enterprise_learner_data[0]['enterprise_customer']['entitlements']
+    try:
+        entitlements = enterprise_learner_data[0]['enterprise_customer']['entitlements']
+    except KeyError:
+        logger.info('Invalid structure for enterprise learner API response', learner.username)
+        return []
+
     return entitlements
+
 
 def get_enterprise_learner_data(site, learner):
     """
@@ -177,10 +186,14 @@ def get_enterprise_learner_data(site, learner):
 
     response = cache.get(cache_key)
     if not response:
-        response = site.siteconfiguration.enterprise_api_client.enterprise-learner(learner.username).get()
+        api = site.siteconfiguration.course_catalog_api_client
+        endpoint = getattr(api, resource)
+        querystring = {'username': learner.username}
+        response = endpoint().get(**querystring)
         cache.set(cache_key, response, settings.ENTERPRISE_API_CACHE_TIMEOUT)
 
     return response
+
 
 def get_available_voucher_for_product(request, product, vouchers):
     """
@@ -201,6 +214,7 @@ def get_available_voucher_for_product(request, product, vouchers):
             if product.course_id in voucher_course_ids:
                 return voucher
 
+
 def get_course_ids_from_voucher(site, voucher):
     """
     Get site base list of course ids/keys from the provided voucher object.
@@ -217,10 +231,10 @@ def get_course_ids_from_voucher(site, voucher):
     offer_range = voucher_offer.condition.range
     if offer_range.course_catalog:
         course_catalog = get_course_catalogs(site=site, resource_id=offer_range.course_catalog)
-        course_runs = get_all_range_catalog_query_results(site, course_catalog.query)
+        course_runs = get_catalog_course_runs(site, course_catalog.query)
         voucher_course_ids = [course_run.key for course_run in course_runs]
     elif offer_range.catalog_query:
-        course_runs = get_all_range_catalog_query_results(site, offer_range.catalog_query)
+        course_runs = get_catalog_course_runs(site, offer_range.catalog_query)
         voucher_course_ids = [course_run.key for course_run in course_runs]
     else:
         stock_records = offer_range.catalog.stock_records.all()
