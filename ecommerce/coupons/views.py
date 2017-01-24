@@ -84,6 +84,7 @@ class CouponAppView(StaffOnlyMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super(CouponAppView, self).get_context_data(**kwargs)
+        print "a =========> ", 1
         context['admin'] = 'coupon'
         return context
 
@@ -111,6 +112,7 @@ class CouponOfferView(TemplateView):
     @method_decorator(login_required_for_credit)
     def get(self, request, *args, **kwargs):
         """Get method for coupon redemption page."""
+        print "a =========> ", 2
         return super(CouponOfferView, self).get(request, *args, **kwargs)
 
 

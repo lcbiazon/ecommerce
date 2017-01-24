@@ -333,7 +333,10 @@ class SiteConfiguration(models.Model):
     @cached_property
     def enterprise_api_client(self):
         """
-        Returns an API client to access the Enterprise service.
+        Returns an Slumber based REST API client for the provided site.
+
+        Example:
+            site.siteconfiguration.enterprise_api_client.enterprise-learner(learner.username).get()
 
         Returns:
             EdxRestApiClient: The client to access the Enterprise service.

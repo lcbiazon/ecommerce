@@ -21,7 +21,7 @@
           ],
           "branding_configuration": {
             "enterprise_customer": "cf246b88-d5f6-4908-a522-fc307e0b0c59",
-            "logo": "https://www.edx.org/sites/default/files/homepage/banner/promo/bkg/onethird-539x290-csedweek.jpg"
+            "logo": "https://open.edx.org/sites/all/themes/edx_open/logo.png"
           },
           "entitlements": [
             {
