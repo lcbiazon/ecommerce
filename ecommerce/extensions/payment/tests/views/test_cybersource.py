@@ -116,6 +116,16 @@ class CybersourceSubmitViewTests(CybersourceMixin, TestCase):
         error_msg = 'Your basket may have been modified or already purchased. Refresh the page to try again.'
         self._assert_basket_error(basket.id, error_msg)
 
+    def mock_sdn_check_api_response(self, results):
+        """ Mock the SDN check API response. """
+        httpretty.register_uri(
+            httpretty.GET,
+            self.site.siteconfiguration.sdn_api_url,
+            body=json.dumps({'total': results}),
+            status=200,
+            content_type='application/json'
+        )
+
     @freeze_time('2016-01-01')
     @httpretty.activate
     def test_valid_request(self):
@@ -124,14 +134,7 @@ class CybersourceSubmitViewTests(CybersourceMixin, TestCase):
         data = self._generate_data(basket.id)
 
         # Mock the SDN check to return no matches.
-        httpretty.register_uri(
-            httpretty.GET,
-            self.site.siteconfiguration.sdn_api_url,
-            body=json.dumps({'total': 0}),
-            status=200,
-            content_type='application/json'
-        )
-
+        self.mock_sdn_check_api_response(0)
         response = self.client.post(self.path, data)
 
         self.assertEqual(response.status_code, 200)
@@ -178,8 +181,21 @@ class CybersourceSubmitViewTests(CybersourceMixin, TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response['content-type'], JSON)
 
-        errors = json.loads(response.content)['field_errors']
-        self.assertIn(field, errors)
+        response_content = json.loads(response.content)
+        self.assertNotIn('sdn_failure', response_content.keys())
+        self.assertIn(field, response_content['field_errors'])
+
+    @httpretty.activate
+    def test_sdn_check_error(self):
+        """Verify the view responds with a JSON object containing an SDN error message when SDN check fails."""
+        basket = self._create_valid_basket()
+        data = self._generate_data(basket.id)
+        self.mock_sdn_check_api_response(1)
+
+        response = self.client.post(self.path, data)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response['content-type'], JSON)
+        self.assertIsNotNone(json.loads(response.content)['sdn_failure'])
 
 
 @ddt.ddt

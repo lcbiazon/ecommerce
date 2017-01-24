@@ -55,11 +55,11 @@ class SdnCheckFailure(models.Model):
     created = models.DateTimeField(auto_now_add=True)
 
     def __unicode__(self):
-        return _(u'{full_name} [{country}] - basket [{basket_id}]'.format(
+        return _(u'{full_name} [{country}] - basket [{basket_id}]').format(
             full_name=self.full_name,
             country=self.country,
             basket_id=self.basket.id
-        ))
+        )
 
     class Meta(object):
         verbose_name = "SDN Check Failure"
