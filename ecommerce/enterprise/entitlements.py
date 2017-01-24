@@ -13,7 +13,9 @@ from oscar.core.loading import get_model
 from requests.exceptions import ConnectionError, Timeout
 from slumber.exceptions import SlumberBaseException
 
+from ecommerce.coupons.utils import get_all_range_catalog_query_results
 from ecommerce.coupons.views import voucher_is_valid
+from ecommerce.courses.utils import get_course_catalogs
 from ecommerce.enterprise.tmp import utils
 from ecommerce.enterprise.utils import is_enterprise_feature_enabled
 from ecommerce.extensions.api.serializers import retrieve_offer, retrieve_voucher
@@ -186,9 +188,37 @@ def get_available_voucher_for_product(request, product, vouchers):
         vouchers: (List) List of voucher class objects for an enterprise
 
     """
-    # TODO: Handle multiple entitlements/vouchers for an enterprise WRT some criterion
-
     for voucher in vouchers:
         is_valid_voucher, __ = voucher_is_valid(voucher, [product], request)
         if is_valid_voucher:
-            return voucher
+            voucher_course_ids = get_course_ids_from_voucher(request.site, voucher)
+            if product.course_id in voucher_course_ids:
+                return voucher
+
+def get_course_ids_from_voucher(site, voucher):
+    """
+    Get site base list of course ids/keys from the provided voucher object.
+
+    Arguments:
+        site: (django.contrib.sites.Site) site instance
+        voucher (Voucher): voucher class object
+
+    Returns:
+        list of course ids
+
+    """
+    voucher_offer = voucher.offers.first()
+    offer_range = voucher_offer.condition.range
+    if offer_range.course_catalog:
+        course_catalog = get_course_catalogs(site=site, resource_id=offer_range.course_catalog)
+        course_runs = get_all_range_catalog_query_results(site, course_catalog.query)
+        voucher_course_ids = [course_runs.key for course_run in course_runs]
+    elif offer_range.catalog_query:
+        course_runs = get_all_range_catalog_query_results(site, offer_range.catalog_query)
+        voucher_course_ids = [course_run.key for course_run in course_runs]
+    else:
+        stock_records = offer_range.catalog.stock_records.all()
+        seats = Product.objects.filter(id__in=[sr.product.id for sr in stock_records])
+        voucher_course_ids = [seat.course_id for seat in seats]
+
+    return voucher_course_ids
