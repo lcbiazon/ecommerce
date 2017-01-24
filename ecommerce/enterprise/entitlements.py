@@ -17,7 +17,6 @@ from slumber.exceptions import SlumberBaseException
 from ecommerce.coupons.utils import get_all_range_catalog_query_results
 from ecommerce.coupons.views import voucher_is_valid
 from ecommerce.courses.utils import get_course_catalogs
-from ecommerce.enterprise.tmp import utils
 from ecommerce.enterprise.utils import is_enterprise_feature_enabled
 from ecommerce.extensions.api.serializers import retrieve_offer, retrieve_voucher
 
@@ -100,7 +99,6 @@ def get_entitlements_for_learner(site, learner):
     entitlements = enterprise_learner_data[0]['enterprise_customer']['entitlements']
     return entitlements
 
-@utils.dummy_data('enterprise_api_response_for_learner')
 def get_enterprise_learner_data(site, learner):
     """
     Fetch information related to enterprise and its entitlements according to
