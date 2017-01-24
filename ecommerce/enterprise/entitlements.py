@@ -231,11 +231,11 @@ def get_course_ids_from_voucher(site, voucher):
     offer_range = voucher_offer.condition.range
     if offer_range.course_catalog:
         course_catalog = get_course_catalogs(site=site, resource_id=offer_range.course_catalog)
-        course_runs = get_catalog_course_runs(site, course_catalog.query)
-        voucher_course_ids = [course_run.key for course_run in course_runs]
+        course_runs = get_catalog_course_runs(site, course_catalog.get('query'))
+        voucher_course_ids = [course_run.get('key') for course_run in course_runs if course_run.get('key')]
     elif offer_range.catalog_query:
         course_runs = get_catalog_course_runs(site, offer_range.catalog_query)
-        voucher_course_ids = [course_run.key for course_run in course_runs]
+        voucher_course_ids = [course_run.get('key') for course_run in course_runs if course_run.get('key')]
     else:
         stock_records = offer_range.catalog.stock_records.all()
         seats = Product.objects.filter(id__in=[sr.product.id for sr in stock_records])
