@@ -9,6 +9,7 @@ the learner's enterprise eligibility criterion.
 """
 import logging
 
+from django.conf import settings
 from oscar.core.loading import get_model
 from requests.exceptions import ConnectionError, Timeout
 from slumber.exceptions import SlumberBaseException
@@ -171,8 +172,15 @@ def get_enterprise_learner_data(site, learner):
         }
 
     """
-    response = site.siteconfiguration.enterprise_api_client.enterprise-learner(learner.username).get()
-    # TODO: Cache the response from enterprise API in case of 200 status
+    resource = 'enterprise-learner'
+    partner_code = site.siteconfiguration.partner.short_code
+    cache_key = '{}_{}_{}.api.data'.format(site.domain, partner_code, resource)
+    cache_key = hashlib.md5(cache_key).hexdigest()
+
+    response = cache.get(cache_key)
+    if not response:
+        response = site.siteconfiguration.enterprise_api_client.enterprise-learner(learner.username).get()
+        cache.set(cache_key, response, settings.ENTERPRISE_API_CACHE_TIMEOUT)
 
     return response
 
@@ -212,7 +220,7 @@ def get_course_ids_from_voucher(site, voucher):
     if offer_range.course_catalog:
         course_catalog = get_course_catalogs(site=site, resource_id=offer_range.course_catalog)
         course_runs = get_all_range_catalog_query_results(site, course_catalog.query)
-        voucher_course_ids = [course_runs.key for course_run in course_runs]
+        voucher_course_ids = [course_run.key for course_run in course_runs]
     elif offer_range.catalog_query:
         course_runs = get_all_range_catalog_query_results(site, offer_range.catalog_query)
         voucher_course_ids = [course_run.key for course_run in course_runs]

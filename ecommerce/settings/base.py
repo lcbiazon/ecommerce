@@ -575,6 +575,8 @@ CRISPY_TEMPLATE_PACK = 'bootstrap3'
 # ENTERPRISE APP CONFIGURATION
 # URL for Enterprise service API
 ENTERPRISE_API_URL = 'http://localhost:8000/enterprise/api/v1/'
+# Cache enterprise response from Enterprise API.
+ENTERPRISE_API_CACHE_TIMEOUT = 3600  # Value is in seconds
 
 # Name for waffle switch to use for enabling enterprise features on runtime.
 ENABLE_ENTERPRISE_ON_RUNTIME_SWITCH = 'enable_enterprise_on_runtime'

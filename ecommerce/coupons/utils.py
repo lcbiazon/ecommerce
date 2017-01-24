@@ -54,7 +54,7 @@ def get_all_range_catalog_query_results(site, query):
     """
     resource = 'course_runs'
     partner_code = site.siteconfiguration.partner.short_code
-    cache_key = '{}_{}_{}_{}.course_runs.api.data'.format(site.domain, resource, partner_code, query)
+    cache_key = '{}_{}_{}_{}.api.data'.format(site.domain, partner_code, resource, query)
     cache_key = hashlib.md5(cache_key).hexdigest()
 
     response = cache.get(cache_key)
